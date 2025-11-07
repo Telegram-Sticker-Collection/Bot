@@ -83,7 +83,7 @@ download_file() {
 
 handle_sticker() {
     local sticker_set_name="$1"
-    local $chat_id="$2" # requester user
+    local chat_id="$2" # requester user
 
     if ! needs_update "$sticker_set_name"; then
         echo "Sticker set '$sticker_set_name' is already downloaded or updated recently."
