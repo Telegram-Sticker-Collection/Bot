@@ -24,9 +24,18 @@ initialize() {
     mkdir -p "$STICKER_FILES_DIR"
 }
 
-# update_index() {
-#     thumbnails=$(cat "$STICKER_DIR/thumbnails.json")
-# }
+update_index() {
+    local set_name="$1"
+    local ext="$2"
+
+    if [ ! -f "$STICKER_DIR/thumbnails.json" ]; then
+        echo "{}" > "$STICKER_DIR/thumbnails.json"
+    fi
+
+    thumbnails=$(cat "$STICKER_DIR/thumbnails.json")
+    thumbnails=$(echo "$thumbnails" | jq -c --arg set_name "$set_name" --arg ext "$ext" '.[$set_name] = $ext')
+    echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
+}
 
 update_repo() {
     local sticker_set_name="$1"
@@ -66,7 +75,7 @@ download_sticker_set_info() {
     response=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getStickerSet?name=$set_name")
 
     if [[ $(echo "$response" | jq -r '.ok') == "true" ]]; then
-        echo "$response" | jq '.result + {last_sticker_info_download: now | floor}' > "$STICKER_INFO_DIR/$set_name.json"
+        echo "$response" | jq -c '.result + {last_sticker_info_download: now | floor}' > "$STICKER_INFO_DIR/$set_name.json"
         return 0
     else
         echo "Error: $(echo "$response" | jq -r .description)"
@@ -125,10 +134,11 @@ handle_sticker() {
         extension="${file_path##*.}"
         set_info=$(echo "$set_info" | jq --arg ext "$extension" '. + {thumbnail_extension: $ext}')
         download_file "https://api.telegram.org/file/bot$BOT_TOKEN/$file_path" "$STICKER_FILES_DIR/$sticker_set_name/thumbnail.$extension"
+        update_index "$sticker_set_name" "$extension"
     fi
 
     # Update last download timestamp
-    set_info=$(echo "$set_info" | jq '. + {last_file_download: now | floor}')
+    set_info=$(echo "$set_info" | jq -c '. + {last_file_download: now | floor}')
 
     echo "$set_info" > "$STICKER_INFO_DIR/$sticker_set_name.json"
 
