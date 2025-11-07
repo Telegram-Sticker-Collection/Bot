@@ -1,0 +1,12 @@
+services:
+  nginx-proxy:
+    build: .
+    restart: always
+    volumes:
+      - ./files:/app/files
+    env_file: "secrets.env"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "2"
