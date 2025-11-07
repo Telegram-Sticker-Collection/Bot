@@ -93,9 +93,10 @@ download_file() {
 handle_sticker() {
     local sticker_set_name="$1"
     local chat_id="$2" # requester user
+    local force_download="${3:-false}"
 
-    if ! needs_update "$sticker_set_name"; then
-        echo "Sticker set '$sticker_set_name' is already downloaded or updated recently."
+    if ! needs_update "$sticker_set_name" && [[ "$force_download" != true ]]; then
+        send_message "Sticker set '$sticker_set_name' is already downloaded or updated recently" "$chat_id"
         return
     fi
 
@@ -143,6 +144,8 @@ handle_sticker() {
     echo "$set_info" > "$STICKER_INFO_DIR/$sticker_set_name.json"
 
     send_message "Downloaded all stickers for set '$sticker_set_name'" "$chat_id"
+
+    update_repo "$sticker_set_name"
 }
 
 start_bot() {
@@ -162,9 +165,15 @@ start_bot() {
                 # Check for sticker
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
                 if [[ -n "$sticker_set_name" ]]; then
-                    send_message "Sticker set received: '$sticker_set_name'" "$chat_id"
+                    send_message "Sticker set '$sticker_set_name'" "$chat_id"
                     handle_sticker "$sticker_set_name" "$chat_id"
-                    update_repo "$sticker_set_name"
+                fi
+
+                message_text=$(echo "$update" | jq -r '.message.text // empty')
+                if [[ $message_text =~ ^force\ download\ \'(.+)\'$ ]]; then
+                    sticker_set_name="${BASH_REMATCH[1]}"
+                    send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id"
+                    handle_sticker "$sticker_set_name" "$chat_id" true
                 fi
             fi
         done
