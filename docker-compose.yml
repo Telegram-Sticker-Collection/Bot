@@ -4,8 +4,8 @@ services:
     restart: always
     volumes:
       - ./files:/app/files
-      - ./keys/id_ed25519:/root/.ssh/id_ed25519
-      - ./keys/id_ed25519.pub:/root/.ssh/id_ed25519.pub
+      - ./keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ./keys/id_ed25519.pub:/root/.ssh/id_ed25519.pub:ro
     env_file: "secrets.env"
     logging:
       driver: "json-file"
