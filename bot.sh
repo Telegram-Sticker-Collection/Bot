@@ -5,11 +5,26 @@
 
 ADMIN_CHAT_IDS=("$ADMIN_CHAT_ID")
 
-STICKER_DIR="./stickers"
+STICKER_DIR="/app/files/Stickers"
 STICKER_INFO_DIR="$STICKER_DIR/info"
 STICKER_FILES_DIR="$STICKER_DIR/files"
 
-initialize_directory() {
+initialize() {
+    mkdir -p /root/.ssh
+    echo $GIT_PRIVATE_KEY > /root/.ssh/id_ed25519
+    echo $GIT_PUBLIC_KEY > /root/.ssh/id_ed25519.pub
+    chmod 600 /root/.ssh/id_ed25519
+    chmod 644 /root/.ssh/id_ed25519.pub
+    ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+    if [ -d "$STICKER_DIR/.git" ]; then
+        cd $STICKER_DIR
+        git pull
+    else
+        git clone $REPO_URL $STICKER_DIR
+        cd $STICKER_DIR
+    fi
+
     mkdir -p "$STICKER_INFO_DIR"
     mkdir -p "$STICKER_FILES_DIR"
 }
@@ -17,6 +32,15 @@ initialize_directory() {
 # update_index() {
 #     thumbnails=$(cat "$STICKER_DIR/thumbnails.json")
 # }
+
+update_repo() {
+    local sticker_set_name="$1"
+
+    git pull
+    git add --all
+    git commit -m "Bot: Update sticker set '$sticker_set_name'"
+    git push
+}
 
 # Function to check if the sticker set info exists and if it needs to be updated
 needs_update() {
@@ -135,6 +159,7 @@ start_bot() {
                 if [[ -n "$sticker_set_name" ]]; then
                     send_message "Sticker set received: '$sticker_set_name'" "$chat_id"
                     handle_sticker "$sticker_set_name" "$chat_id"
+                    update_repo "$sticker_set_name"
                 fi
             fi
         done
@@ -143,7 +168,7 @@ start_bot() {
 }
 
 main() {
-    initialize_directory
+    initialize
     start_bot
 }
 
