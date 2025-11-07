@@ -10,11 +10,6 @@ STICKER_INFO_DIR="$STICKER_DIR/info"
 STICKER_FILES_DIR="$STICKER_DIR/files"
 
 initialize() {
-    mkdir -p /root/.ssh
-    echo $GIT_PRIVATE_KEY > /root/.ssh/id_ed25519
-    echo $GIT_PUBLIC_KEY > /root/.ssh/id_ed25519.pub
-    chmod 600 /root/.ssh/id_ed25519
-    chmod 644 /root/.ssh/id_ed25519.pub
     ssh-keyscan github.com >> /root/.ssh/known_hosts
 
     if [ -d "$STICKER_DIR/.git" ]; then
