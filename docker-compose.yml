@@ -1,5 +1,5 @@
 services:
-  nginx-proxy:
+  bot:
     build: .
     restart: always
     volumes:
