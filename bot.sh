@@ -162,18 +162,36 @@ start_bot() {
             chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
 
             if [[ "${ADMIN_CHAT_IDS[@]}" =~ "$chat_id" ]]; then
-                # Check for sticker
+                # Check for sticker message
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
                 if [[ -n "$sticker_set_name" ]]; then
                     send_message "Sticker set '$sticker_set_name'" "$chat_id"
                     handle_sticker "$sticker_set_name" "$chat_id"
                 fi
 
+                # Check for "force download" command
                 message_text=$(echo "$update" | jq -r '.message.text // empty')
                 if [[ $message_text =~ ^force\ download\ \'(.+)\'$ ]]; then
                     sticker_set_name="${BASH_REMATCH[1]}"
                     send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id"
                     handle_sticker "$sticker_set_name" "$chat_id" true
+                fi
+
+                # Check for "download link" command with multiple links
+                if [[ $message_text =~ ^download\ link(.*) ]]; then
+                    # Get the rest of the message excluding "download link"
+                    links="${BASH_REMATCH[1]}"
+
+                    # Use a loop to find and process all links
+                    while [[ $links =~ https://t\.me/(addemoji|addstickers)/([a-zA-Z0-9]+) ]]; do
+                        sticker_set_name="${BASH_REMATCH[2]}"
+
+                        send_message "Sticker set '$sticker_set_name'" "$chat_id"
+                        handle_sticker "$sticker_set_name" "$chat_id"
+                        
+                        # Remove the processed link from links
+                        links=${links/${BASH_REMATCH[0]}/}
+                    done
                 fi
             fi
         done
