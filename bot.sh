@@ -183,7 +183,7 @@ start_bot() {
                     links="${BASH_REMATCH[1]}"
 
                     # Use a loop to find and process all links
-                    while [[ $links =~ t\.me/(addemoji|addstickers)/([a-zA-Z0-9\-ـ]+) ]]; do
+                    while [[ $links =~ t\.me/(addemoji|addstickers)/([a-zA-Z0-9\-_]+) ]]; do
                         sticker_set_name="${BASH_REMATCH[2]}"
 
                         send_message "Sticker set '$sticker_set_name'" "$chat_id"
