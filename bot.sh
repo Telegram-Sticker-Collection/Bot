@@ -154,7 +154,7 @@ start_bot() {
     # Bot update loop
     offset=0
     while true; do
-        response=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getUpdates?offset=$offset")
+        response=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getUpdates?offset=$offset&timeout=120")
         offset=$(echo "$response" | jq '.result | map(.update_id) | max + 1')
 
         # Iterate over each update in the response
