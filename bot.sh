@@ -38,7 +38,6 @@ update_index() {
     echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
 
     emoji_index=$(cat "$STICKER_DIR/emoji_index.json")
-    stickers=$(echo "$set_info" | jq -c '.stickers[]')
     for sticker in $stickers; do
         file_unique_id=$(echo "$sticker" | jq -r '.file_unique_id')
         st_ext=$(echo "$sticker" | jq -r '.extension')
@@ -61,7 +60,7 @@ reindex() {
         th_ext=$(cat "$file" | jq -r '.thumbnail_extension')
         thumbnails=$(echo "$thumbnails" | jq -c --arg set_name "$set_name" --arg ext "$th_ext" '.[$ext] |= (. + [$set_name])') # no need to check unique
 
-        stickers=$(echo "$set_info" | jq -c '.stickers[]')
+        stickers=$(echo "$file" | jq -c '.stickers[]')
         for sticker in $stickers; do
             file_unique_id=$(echo "$sticker" | jq -r '.file_unique_id')
             st_ext=$(echo "$sticker" | jq -r '.extension')
