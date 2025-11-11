@@ -46,6 +46,7 @@ update_index() {
         emoji_index=$(echo "$emoji_index" | jq -c --arg file_path "$file_path" --arg emoji "$emoji" '.[$emoji] |= (. + [$file_path] | unique)')
     done
     echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
+    gzip -k "$STICKER_DIR/emoji_index.json"
 }
 
 # a bit of duplicate code, but it keeps the data in memory to be faster
@@ -73,6 +74,7 @@ reindex() {
     echo "Saving new index files"
     echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
     echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
+    gzip -k "$STICKER_DIR/emoji_index.json"
 }
 
 update_repo() {
@@ -173,6 +175,7 @@ handle_sticker() {
         extension="${file_path##*.}"
         set_info=$(echo "$set_info" | jq --arg ext "$extension" '. + {thumbnail_extension: $ext}')
         download_file "https://api.telegram.org/file/bot$BOT_TOKEN/$file_path" "$STICKER_FILES_DIR/$sticker_set_name/thumbnail.$extension"
+        send_message "Indexing '$sticker_set_name'" "$chat_id"
         update_index "$sticker_set_name" "$extension" "$stickers"
     fi
 
