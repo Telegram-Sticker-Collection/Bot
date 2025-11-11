@@ -27,14 +27,53 @@ initialize() {
 update_index() {
     local set_name="$1"
     local ext="$2"
+    local stickers="$3"
 
     if [ ! -f "$STICKER_DIR/thumbnails.json" ]; then
         echo "{}" > "$STICKER_DIR/thumbnails.json"
     fi
 
     thumbnails=$(cat "$STICKER_DIR/thumbnails.json")
-    thumbnails=$(echo "$thumbnails" | jq -c --arg set_name "$set_name" --arg ext "$ext" '.[$set_name] = $ext')
+    thumbnails=$(echo "$thumbnails" | jq -c --arg set_name "$set_name" --arg ext "$ext" '.[$ext] |= (. + [$set_name] | unique)')
     echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
+
+    emoji_index=$(cat "$STICKER_DIR/emoji_index.json")
+    stickers=$(echo "$set_info" | jq -c '.stickers[]')
+    for sticker in $stickers; do
+        file_unique_id=$(echo "$sticker" | jq -r '.file_unique_id')
+        st_ext=$(echo "$sticker" | jq -r '.extension')
+        file_path="$set_name/$file_unique_id.$st_ext"
+        emoji=$(echo "$sticker" | jq -r '.emoji')
+        emoji_index=$(echo "$emoji_index" | jq -c --arg file_path "$file_path" --arg emoji "$emoji" '.[$emoji] |= (. + [$file_path] | unique)')
+    done
+    echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
+}
+
+# a bit of duplicate code, but it keeps the data in memory to be faster
+reindex() {
+    echo "Starting reindex"
+    thumbnails='{}'
+    emoji_index='{}'
+
+    for file in $STICKER_INFO_DIR/*.json; do
+        # echo "\t Processing file: $file"
+        set_name=$(cat "$file" | jq -r '.name')
+        th_ext=$(cat "$file" | jq -r '.thumbnail_extension')
+        thumbnails=$(echo "$thumbnails" | jq -c --arg set_name "$set_name" --arg ext "$th_ext" '.[$ext] |= (. + [$set_name])') # no need to check unique
+
+        stickers=$(echo "$set_info" | jq -c '.stickers[]')
+        for sticker in $stickers; do
+            file_unique_id=$(echo "$sticker" | jq -r '.file_unique_id')
+            st_ext=$(echo "$sticker" | jq -r '.extension')
+            file_path="$set_name/$file_unique_id.$st_ext"
+            emoji=$(echo "$sticker" | jq -r '.emoji')
+            emoji_index=$(echo "$emoji_index" | jq -c --arg file_path "$file_path" --arg emoji "$emoji" '.[$emoji] |= (. + [$file_path] | unique)')
+        done
+    done
+    
+    echo "Saving new index files"
+    echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
+    echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
 }
 
 update_repo() {
@@ -135,7 +174,7 @@ handle_sticker() {
         extension="${file_path##*.}"
         set_info=$(echo "$set_info" | jq --arg ext "$extension" '. + {thumbnail_extension: $ext}')
         download_file "https://api.telegram.org/file/bot$BOT_TOKEN/$file_path" "$STICKER_FILES_DIR/$sticker_set_name/thumbnail.$extension"
-        update_index "$sticker_set_name" "$extension"
+        update_index "$sticker_set_name" "$extension" "$stickers"
     fi
 
     # Update last download timestamp
@@ -198,10 +237,3 @@ start_bot() {
         sleep 1
     done
 }
-
-main() {
-    initialize
-    start_bot
-}
-
-main

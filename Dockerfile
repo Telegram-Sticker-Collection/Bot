@@ -9,5 +9,6 @@ RUN git config --global user.email "TelegramStickerCollectionBot@nowhere.nowhere
 
 WORKDIR /app
 COPY bot.sh .
+COPY manage.sh .
 
-CMD ["bash", "bot.sh"]
+CMD ["bash", "manage.sh", "start_bot"]
