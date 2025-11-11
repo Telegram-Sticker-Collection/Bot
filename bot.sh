@@ -46,6 +46,7 @@ update_index() {
         emoji_index=$(echo "$emoji_index" | jq -c --arg file_path "$file_path" --arg emoji "$emoji" '.[$emoji] |= (. + [$file_path] | unique)')
     done
     echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
+    rm "$STICKER_DIR/emoji_index.json.gz"
     gzip -k "$STICKER_DIR/emoji_index.json"
 }
 
@@ -74,6 +75,7 @@ reindex() {
     echo "Saving new index files"
     echo "$thumbnails" > "$STICKER_DIR/thumbnails.json"
     echo "$emoji_index" > "$STICKER_DIR/emoji_index.json"
+    rm "$STICKER_DIR/emoji_index.json.gz"
     gzip -k "$STICKER_DIR/emoji_index.json"
 }
 
