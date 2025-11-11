@@ -1,9 +1,6 @@
 source bot.sh
-
-
 main() {
     initialize
-
     local command="$1"
     case "$command" in
         start_bot)
@@ -17,3 +14,4 @@ main() {
             ;;
     esac
 }
+main "$@"
