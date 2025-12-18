@@ -248,7 +248,7 @@ start_bot() {
                 # Check for sticker message
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
                 if [[ -n "$sticker_set_name" ]]; then
-                    send_message "Sticker set '$sticker_set_name'" "$chat_id" "$message_id"
+                    send_message "Sticker set '$sticker_set_name'" "$chat_id" "$message_id" "$sticker_set_name"
                     handle_sticker "$sticker_set_name" "$chat_id" "$message_id"
                 fi
 
