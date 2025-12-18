@@ -94,13 +94,15 @@ needs_update() {
     local info_file="$STICKER_INFO_DIR/$set_name.json"
 
     if [[ -f "$info_file" ]]; then
-        last_sticker_info_download_timestamp=$(jq -r '.last_sticker_info_download' "$info_file")
-        current_timestamp=$(date +%s)
+        return 1  # No update needed
+
+        # last_sticker_info_download_timestamp=$(jq -r '.last_sticker_info_download' "$info_file")
+        # current_timestamp=$(date +%s)
         
-        # Check if last download was over 15 days ago
-        if (( (current_timestamp - last_sticker_info_download_timestamp) < 1296000 )); then
-            return 1  # No update needed
-        fi
+        # # Check if last download was over 15 days ago
+        # if (( (current_timestamp - last_sticker_info_download_timestamp) < 1296000 )); then
+        #     return 1  # No update needed
+        # fi
     fi
     
     return 0  # Update needed
@@ -138,7 +140,7 @@ handle_sticker() {
     local force_download="${3:-false}"
 
     if ! needs_update "$sticker_set_name" && [[ "$force_download" != true ]]; then
-        send_message "Sticker set '$sticker_set_name' is already downloaded or updated recently" "$chat_id"
+        send_message "Sticker set '$sticker_set_name' is already downloaded. Use 'force download link' if it's necessary to update it." "$chat_id"
         return
     fi
 
@@ -212,14 +214,6 @@ start_bot() {
                     handle_sticker "$sticker_set_name" "$chat_id"
                 fi
 
-                # Check for "force download" command
-                message_text=$(echo "$update" | jq -r '.message.text // empty')
-                if [[ $message_text =~ ^force\ download\ \'(.+)\'$ ]]; then
-                    sticker_set_name="${BASH_REMATCH[1]}"
-                    send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id"
-                    handle_sticker "$sticker_set_name" "$chat_id" true
-                fi
-
                 # Check for "download link" command with multiple links
                 if [[ $message_text =~ ^download\ link(.*) ]]; then
                     # Get the rest of the message excluding "download link"
@@ -231,6 +225,23 @@ start_bot() {
 
                         send_message "Sticker set '$sticker_set_name'" "$chat_id"
                         handle_sticker "$sticker_set_name" "$chat_id"
+                        
+                        # Remove the processed link from links
+                        links=${links/${BASH_REMATCH[0]}/}
+                    done
+                fi
+
+                # Check for "force download link" command with multiple links
+                if [[ $message_text =~ ^force\ download\ link(.*) ]]; then
+                    # Get the rest of the message excluding "download link"
+                    links="${BASH_REMATCH[1]}"
+
+                    # Use a loop to find and process all links
+                    while [[ $links =~ t\.me/(addemoji|addstickers)/([a-zA-Z0-9\\-\_]+) ]]; do
+                        sticker_set_name="${BASH_REMATCH[2]}"
+
+                        send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id"
+                        handle_sticker "$sticker_set_name" "$chat_id" true
                         
                         # Remove the processed link from links
                         links=${links/${BASH_REMATCH[0]}/}
