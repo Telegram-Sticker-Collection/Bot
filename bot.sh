@@ -111,7 +111,12 @@ needs_update() {
 send_message() {
     local text="$1"
     local chat_id="$2"
-    curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d "chat_id=$chat_id&text=$text"
+    local reply_to_message_id="$3"
+    local data="chat_id=$chat_id&text=$text"
+    if [[ -n "$reply_to_message_id" && "$reply_to_message_id" != "null" ]]; then
+        data="$data&reply_to_message_id=$reply_to_message_id"
+    fi
+    curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d "$data"
 }
 
 download_sticker_set_info() {
@@ -137,10 +142,11 @@ download_file() {
 handle_sticker() {
     local sticker_set_name="$1"
     local chat_id="$2" # requester user
-    local force_download="${3:-false}"
+    local message_id="$3"
+    local force_download="${4:-false}"
 
     if ! needs_update "$sticker_set_name" && [[ "$force_download" != true ]]; then
-        send_message "Sticker set '$sticker_set_name' is already downloaded. Use 'force download link' if it's necessary to update it." "$chat_id"
+        send_message "Sticker set '$sticker_set_name' is already downloaded. Use 'force download link' if it's necessary to update it." "$chat_id" "$message_id"
         return
     fi
 
@@ -149,7 +155,7 @@ handle_sticker() {
         return
     fi
 
-    send_message "Got sticker set info for '$sticker_set_name'" "$chat_id"
+    send_message "Got sticker set info for '$sticker_set_name'" "$chat_id" "$message_id"
     
     # Create a directory for the sticker set
     mkdir -p "$STICKER_FILES_DIR/$sticker_set_name"
@@ -179,7 +185,7 @@ handle_sticker() {
         extension="${file_path##*.}"
         set_info=$(echo "$set_info" | jq --arg ext "$extension" '. + {thumbnail_extension: $ext}')
         download_file "https://api.telegram.org/file/bot$BOT_TOKEN/$file_path" "$STICKER_FILES_DIR/$sticker_set_name/thumbnail.$extension"
-        send_message "Indexing '$sticker_set_name'" "$chat_id"
+        send_message "Indexing '$sticker_set_name'" "$chat_id" "$message_id"
         update_index "$sticker_set_name" "$extension" "$stickers"
     fi
 
@@ -188,7 +194,7 @@ handle_sticker() {
 
     echo "$set_info" > "$STICKER_INFO_DIR/$sticker_set_name.json"
 
-    send_message "Downloaded all stickers for set '$sticker_set_name'" "$chat_id"
+    send_message "Downloaded all stickers for set '$sticker_set_name'" "$chat_id" "$message_id"
 
     update_repo "$sticker_set_name"
 }
@@ -204,14 +210,16 @@ start_bot() {
 
         # Iterate over each update in the response
         echo "$response" | jq -c '.result[]' | while read -r update; do
+            echo "$update" # for debug
             chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
+            message_id=$(echo "$update" | jq -r '.message.message_id // empty')
 
             if [[ "${ADMIN_CHAT_IDS[@]}" =~ "$chat_id" ]]; then
                 # Check for sticker message
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
                 if [[ -n "$sticker_set_name" ]]; then
-                    send_message "Sticker set '$sticker_set_name'" "$chat_id"
-                    handle_sticker "$sticker_set_name" "$chat_id"
+                    send_message "Sticker set '$sticker_set_name'" "$chat_id" "$message_id"
+                    handle_sticker "$sticker_set_name" "$chat_id" "$message_id"
                 fi
 
                 # Check for "download link" command with multiple links
@@ -223,8 +231,8 @@ start_bot() {
                     while [[ $links =~ t\.me/(addemoji|addstickers)/([a-zA-Z0-9\\-\_]+) ]]; do
                         sticker_set_name="${BASH_REMATCH[2]}"
 
-                        send_message "Sticker set '$sticker_set_name'" "$chat_id"
-                        handle_sticker "$sticker_set_name" "$chat_id"
+                        send_message "Sticker set '$sticker_set_name'" "$chat_id" "$message_id"
+                        handle_sticker "$sticker_set_name" "$chat_id" "$message_id"
                         
                         # Remove the processed link from links
                         links=${links/${BASH_REMATCH[0]}/}
@@ -240,8 +248,8 @@ start_bot() {
                     while [[ $links =~ t\.me/(addemoji|addstickers)/([a-zA-Z0-9\\-\_]+) ]]; do
                         sticker_set_name="${BASH_REMATCH[2]}"
 
-                        send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id"
-                        handle_sticker "$sticker_set_name" "$chat_id" true
+                        send_message "Sticker set '$sticker_set_name' [force-download]" "$chat_id" "$message_id"
+                        handle_sticker "$sticker_set_name" "$chat_id" "$message_id" true
                         
                         # Remove the processed link from links
                         links=${links/${BASH_REMATCH[0]}/}
