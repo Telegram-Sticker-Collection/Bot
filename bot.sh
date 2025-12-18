@@ -117,6 +117,7 @@ send_message() {
     local reply_to_message_id="$3"
     local sticker_set_name="$4"
     local clear_after="${5:-false}"
+    local parse_mode="${6:-}"
     
     local map_key="${chat_id},${reply_to_message_id},${sticker_set_name}"
     local report_message_id="${MESSAGE_MAP[$map_key]}"
@@ -124,10 +125,16 @@ send_message() {
     if [[ -n "$report_message_id" ]]; then
         # Edit existing message
         local data="chat_id=$chat_id&message_id=$report_message_id&text=$text"
+        if [[ -n "$parse_mode" ]]; then
+            data="$data&parse_mode=$parse_mode"
+        fi
         local response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/editMessageText" -d "$data")
     else
         # Send new message
         local data="chat_id=$chat_id&text=$text"
+        if [[ -n "$parse_mode" ]]; then
+            data="$data&parse_mode=$parse_mode"
+        fi
         if [[ -n "$reply_to_message_id" && "$reply_to_message_id" != "null" ]]; then
             data="$data&reply_to_message_id=$reply_to_message_id"
         fi
@@ -176,7 +183,8 @@ handle_sticker() {
     if [[ $needs_update_result -ne 0 ]] && [[ "$force_download" != true ]]; then
         # No update needed
         local readable_date=$(date -d @"$last_timestamp" '+%Y-%m-%d %H:%M:%S')
-        send_message "Sticker set '$sticker_set_name' is already downloaded (last updated: $readable_date). Use 'force download link' if it's necessary to update it." "$chat_id" "$message_id" "$sticker_set_name" true
+        local msg="Sticker set <a href=\"https://telegram-sticker-collection.github.io/pack/$sticker_set_name\">$sticker_set_name</a> is already downloaded (last updated: $readable_date).<br/><i>Use 'force download link' if it's necessary to update it.</i>"
+        send_message "$msg" "$chat_id" "$message_id" "$sticker_set_name" true HTML
         return
     fi
 
@@ -225,7 +233,8 @@ handle_sticker() {
 
     echo "$set_info" > "$STICKER_INFO_DIR/$sticker_set_name.json"
 
-    send_message "Downloaded all stickers for set '$sticker_set_name'" "$chat_id" "$message_id" "$sticker_set_name" true
+    local msg="Downloaded all stickers for set <a href=\"https://telegram-sticker-collection.github.io/pack/$sticker_set_name\">$sticker_set_name</a>"
+    send_message "$msg" "$chat_id" "$message_id" "$sticker_set_name" true HTML
 
     update_repo "$sticker_set_name"
 }
@@ -244,7 +253,7 @@ start_bot() {
             chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
             message_id=$(echo "$update" | jq -r '.message.message_id // empty')
             message_text=$(echo "$update" | jq -r '.message.text // empty')
-            
+
             if [[ "${ADMIN_CHAT_IDS[@]}" =~ "$chat_id" ]]; then
                 # Check for sticker message
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
