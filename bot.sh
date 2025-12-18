@@ -121,12 +121,25 @@ send_message() {
     local map_key="${chat_id},${reply_to_message_id},${sticker_set_name}"
     local report_message_id="${MESSAGE_MAP[$map_key]}"
     
+    # Debug logging
+    echo "[DEBUG] map_key: $map_key"
+    echo "[DEBUG] report_message_id: $report_message_id"
+    echo "[DEBUG] MESSAGE_MAP size: ${#MESSAGE_MAP[@]}"
+    if [[ ${#MESSAGE_MAP[@]} -gt 0 ]]; then
+        echo "[DEBUG] MESSAGE_MAP contents:"
+        for key in "${!MESSAGE_MAP[@]}"; do
+            echo "[DEBUG]   $key -> ${MESSAGE_MAP[$key]}"
+        done
+    fi
+    
     if [[ -n "$report_message_id" ]]; then
         # Edit existing message
+        echo "[DEBUG] Editing existing message: $report_message_id"
         local data="chat_id=$chat_id&message_id=$report_message_id&text=$text"
         local response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/editMessageText" -d "$data")
     else
         # Send new message
+        echo "[DEBUG] Sending new message"
         local data="chat_id=$chat_id&text=$text"
         if [[ -n "$reply_to_message_id" && "$reply_to_message_id" != "null" ]]; then
             data="$data&reply_to_message_id=$reply_to_message_id"
@@ -136,11 +149,15 @@ send_message() {
         # Extract and store the new message ID
         local new_message_id=$(echo "$response" | jq -r '.result.message_id // empty')
         if [[ -n "$new_message_id" ]]; then
+            echo "[DEBUG] Storing message ID $new_message_id with key $map_key"
             MESSAGE_MAP[$map_key]="$new_message_id"
+        else
+            echo "[DEBUG] Failed to extract message ID from response"
         fi
     fi
     
     if [[ "$clear_after" == "true" ]]; then
+        echo "[DEBUG] Clearing map key: $map_key"
         unset 'MESSAGE_MAP[$map_key]'
     fi
 }
