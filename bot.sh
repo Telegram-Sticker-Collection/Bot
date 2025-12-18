@@ -243,7 +243,8 @@ start_bot() {
         echo "$response" | jq -c '.result[]' | while read -r update; do
             chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
             message_id=$(echo "$update" | jq -r '.message.message_id // empty')
-
+            message_text=$(echo "$update" | jq -r '.message.text // empty')
+            
             if [[ "${ADMIN_CHAT_IDS[@]}" =~ "$chat_id" ]]; then
                 # Check for sticker message
                 sticker_set_name=$(echo "$update" | jq -r '.message.sticker.set_name // empty')
