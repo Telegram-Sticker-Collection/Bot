@@ -151,7 +151,7 @@ handle_sticker() {
     needs_update_result=$?
     if [[ $needs_update_result -ne 0 ]] && [[ "$force_download" != true ]]; then
         # No update needed
-        local readable_date=$(date -r "$last_timestamp" '+%Y-%m-%d %H:%M:%S')
+        local readable_date=$(date -j -f %s "$last_timestamp" '+%Y-%m-%d %H:%M:%S')
         send_message "Sticker set '$sticker_set_name' is already downloaded (last updated: $readable_date). Use 'force download link' if it's necessary to update it." "$chat_id" "$message_id"
         return
     fi
