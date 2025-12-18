@@ -94,6 +94,8 @@ needs_update() {
     local info_file="$STICKER_INFO_DIR/$set_name.json"
 
     if [[ -f "$info_file" ]]; then
+        local timestamp=$(jq -r '.last_sticker_info_download' "$info_file")
+        echo "$timestamp"
         return 1  # No update needed
 
         # last_sticker_info_download_timestamp=$(jq -r '.last_sticker_info_download' "$info_file")
@@ -145,8 +147,12 @@ handle_sticker() {
     local message_id="$3"
     local force_download="${4:-false}"
 
-    if ! needs_update "$sticker_set_name" && [[ "$force_download" != true ]]; then
-        send_message "Sticker set '$sticker_set_name' is already downloaded. Use 'force download link' if it's necessary to update it." "$chat_id" "$message_id"
+    last_timestamp=$(needs_update "$sticker_set_name")
+    needs_update_result=$?
+    if [[ $needs_update_result -ne 0 ]] && [[ "$force_download" != true ]]; then
+        # No update needed
+        local readable_date=$(date -r "$last_timestamp" '+%Y-%m-%d %H:%M:%S')
+        send_message "Sticker set '$sticker_set_name' is already downloaded (last updated: $readable_date). Use 'force download link' if it's necessary to update it." "$chat_id" "$message_id"
         return
     fi
 
@@ -210,7 +216,6 @@ start_bot() {
 
         # Iterate over each update in the response
         echo "$response" | jq -c '.result[]' | while read -r update; do
-            echo "$update" # for debug
             chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
             message_id=$(echo "$update" | jq -r '.message.message_id // empty')
 
