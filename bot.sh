@@ -183,7 +183,7 @@ handle_sticker() {
     if [[ $needs_update_result -ne 0 ]] && [[ "$force_download" != true ]]; then
         # No update needed
         local readable_date=$(date -d @"$last_timestamp" '+%Y-%m-%d %H:%M:%S')
-        local msg="Sticker set <a href=\"https://telegram-sticker-collection.github.io/pack/$sticker_set_name\">$sticker_set_name</a> is already downloaded (last updated: $readable_date).<br/><i>Use 'force download link' if it's necessary to update it.</i>"
+        local msg="Sticker set <a href=\"https://telegram-sticker-collection.github.io/pack/$sticker_set_name\">$sticker_set_name</a> is already downloaded (last updated: $readable_date). Use <i>'force download link'</i> if it's necessary to update it."
         send_message "$msg" "$chat_id" "$message_id" "$sticker_set_name" true HTML
         return
     fi
